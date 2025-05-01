@@ -62,7 +62,8 @@ map_kohonen = True
 # ФАЙЛЫ СОХРАНЕНИЯ
 dataset_train_file_name_kohonen = 'dataset_train.pkl'
 # АВТОМАТИЧЕСКОЕ НАЗВАНИЕ КЛАСТЕРОВ
-default_request_len = 100
+default_request_len = 50 # Минимальное число символов в стандартном обращении
+num_requests_in_standart_cluster = 10 # Минимальное количество обращений в нормальном кластере
 default_anomaly_name = 'Нестандартная формулировка обращения. Требует внимания'
 target_words_for_cluster_kohonen = {
     "высокий_ADJ,/высокое_ADJ,повышаться_VERB,повышенно_ADV,повышенный_ADJ,повышенный_VERB": "Высокое напряжение в сети",

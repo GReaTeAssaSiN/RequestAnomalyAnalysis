@@ -69,17 +69,6 @@ class CSVManager:
     def _get_file_hash(self) -> str:
         file_hash = hashlib.md5(f'{self.file_name}_{self.file_column}'.encode('utf-8')).hexdigest()
         return file_hash
-    
-    def _check_source_data_csv_file(self, dir_path: str) -> bool:
-        if not os.path.isdir(dir_path):
-            print_critical_error('Папка не найдена.', prefix='\n')
-            print_critical_error(f'Путь: {dir_path}', end='\n\n')
-            exit(1)
-        
-        file_path = os.path.join(dir_path, f'{self._get_file_hash()}.csv')
-        if not os.path.isfile(file_path):
-            return False
-        return True
 
     def _load_data_from_excel(self, dir_path: str) -> list[str]:
         if not os.path.isdir(dir_path):
@@ -116,8 +105,10 @@ class CSVManager:
             print_critical_error('Папка не найдена.', prefix='\n')
             print_critical_error(f'Путь: {dir_path}', end='\n\n')
             exit(1)
-        
-        file_path = os.path.join(dir_path, f'{self._get_file_hash()}.csv')
+
+        subfolder_path = os.path.join(dir_path, os.path.splitext(os.path.basename(self.file_name))[0])
+        os.makedirs(subfolder_path, exist_ok=True)
+        file_path = os.path.join(subfolder_path, f'{self._get_file_hash()}.csv')
 
         try:
             not_error = self._check_file_and_column(file_path, '.csv')
@@ -157,8 +148,10 @@ class CSVManager:
             print_critical_error('Папка не найдена.', prefix='\n')
             print_critical_error(f'Путь: {save_dir_path}', end='\n\n')
             exit(1)
-        
-        file_path = os.path.join(save_dir_path, f'{self._get_file_hash()}.csv')
+
+        subfolder_path = os.path.join(save_dir_path, os.path.splitext(os.path.basename(self.file_name))[0])    
+        os.makedirs(subfolder_path, exist_ok=True)
+        file_path = os.path.join(subfolder_path, f'{self._get_file_hash()}.csv')
         
         if not os.path.isfile(file_path):
             print_info('Осуществляется сохранение обращений потребителей в .csv файл. Пожалуйста, подождите...')
@@ -179,16 +172,18 @@ class CSVManager:
             print_info(f'Исходный файл: {os.path.join(self.source_data_dir_path, self.file_name)} -> {self.file_column}')
             print_warn('Если вы хотите обработать новый файл, измените его название или колонку.')
 
-    def read_processed_data_from_csv(self, dir_path: str, suffix: str = None) -> Optional[list[str]]:
+    def read_processed_data_from_csv(self, dir_path: str, suffix: str = None) -> tuple[str, Optional[list[str]]]:
         if not os.path.isdir(dir_path):
             print_critical_error(f'Папка не найдена.', prefix='\n')
             print_critical_error(f'Путь: {dir_path}', end='\n\n')
             exit(1)
-           
+        
         if suffix is None:
             suffix = '_' + os.path.splitext(self.file_name)[0] + '_' + self.file_column
             
-        file_path = os.path.join(dir_path, f'{self._get_file_hash()}{suffix}.csv')
+        subfolder_path = os.path.join(dir_path, os.path.splitext(os.path.basename(self.file_name))[0])
+        os.makedirs(subfolder_path, exist_ok=True)
+        file_path = os.path.join(subfolder_path, f'{self._get_file_hash()}{suffix}.csv')
         
         if os.path.isfile(file_path):
             print_info('Осуществляется чтение предобработанных обращений потребителей из .csv файла. Пожалуйста, подождите...')
@@ -197,7 +192,7 @@ class CSVManager:
                 df = pd.read_csv(file_path, header=None, encoding='utf-8', low_memory=False).map(lambda x: x if pd.notna(x) else None)
                 processed_requests = df.values.tolist()
                 print_info('Предобработанные обращения потребителей были успешно прочитаны!')
-                return processed_requests
+                return subfolder_path, processed_requests
             except Exception as e:
                 print_critical_error('Невозможно прочитать файл.', prefix='\n')
                 print_critical_error(f'Путь к файлу: {file_path}')
@@ -206,7 +201,7 @@ class CSVManager:
         else:
             print_warn('Файл .csv с предобработанными обращениями потребителей не найден.')
             print_warn(f'Путь к файлу: {file_path}', end='\n\n')
-            return None
+            return subfolder_path, None
         
     def save_processed_data_to_csv(self, processed_requests: list[list[str]], dir_path: str, suffix: str = None) -> None:
         if not os.path.isdir(dir_path):
@@ -217,7 +212,9 @@ class CSVManager:
         if suffix is None:
             suffix = '_' + os.path.splitext(self.file_name)[0] + '_' + self.file_column
 
-        file_path = os.path.join(dir_path, f'{self._get_file_hash()}{suffix}.csv')
+        subfolder_path = os.path.join(dir_path, os.path.splitext(os.path.basename(self.file_name))[0])
+        os.makedirs(subfolder_path, exist_ok=True)
+        file_path = os.path.join(subfolder_path, f'{self._get_file_hash()}{suffix}.csv')
         
         if not os.path.isfile(file_path):
             print_info('Осуществляется сохранение предобработанных обращений потребителей в .csv файл. Пожалуйста, подождите...')

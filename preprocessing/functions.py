@@ -52,8 +52,6 @@ def organize_stats(stats: dict) -> dict:
 def custom_preprocess(token: str, lemma: str, pos: str, stats: dict) -> tuple[str, str]:
     changed = False
     token = token.lower()
-    if lemma == "респодобный":
-        print(token)
     if token.startswith('э/э'):
         lemma = 'электроэнергия'
         pos = 'NOUN'

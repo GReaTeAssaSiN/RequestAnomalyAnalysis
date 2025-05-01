@@ -28,15 +28,15 @@ def get_consumer_requests(csv_manager: CSVManager, SOURCE_DATA_DIR_PATH: str, SO
     
     return requests
 
-def get_preprocessed_requests(csv_manager: CSVManager, requests: list[str], PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH: str, PRETRAINED_MODELS_DIR_PATH: str, mode: str='dev', load_model: bool = True) -> list[list[str]]:
+def get_preprocessed_requests(csv_manager: CSVManager, requests: list[str], PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH: str, PRETRAINED_MODELS_DIR_PATH: str, mode: str='dev', load_model: bool = True, model=None) -> list[list[str]]:
     """ ПРЕДОБРАБОТКА ВХОДНЫХ ДАННЫХ  """
     # Надпись
     cf.print_inscription('ПРЕДОБРАБОТКА ВХОДНЫХ ДАННЫХ')
     # Процесс
-    preprocessed_requests = csv_manager.read_processed_data_from_csv(PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH, suffix=None)
+    subfolder_path, preprocessed_requests = csv_manager.read_processed_data_from_csv(PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH, suffix=None)
     if preprocessed_requests is None:
         if load_model: model = load_udpipe_model(PRETRAINED_MODELS_DIR_PATH)
-        preprocessed_requests = process_requests(requests, csv_manager, PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH, model, mode)
+        preprocessed_requests = process_requests(requests, csv_manager, subfolder_path, model, mode)
         csv_manager.save_processed_data_to_csv(preprocessed_requests, PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH, suffix=None)
     else:
         cf.print_info('Полная статистика предобработки находится в сохраненном файле.')
@@ -944,7 +944,7 @@ def dev_handle_mode_get_cluster_and_visualize_kohonen_model(TRAINED_MODEL_DIR_PA
 def dev_handle_mode_setting_up_clusters_and_save(model: nn.SOM, requests: list[str], clean_requests: list[list[str]], 
                                                  request_embeddings: np.ndarray, tfidf_dict: dict[str, float],
                                                  cluster_assignments: list[tuple[int, int]],
-                                                 top_n: int = 30, top_anomaly_orig_n: int = 10) -> Optional[tuple[dict[tuple[int,int],np.ndarray], dict[tuple[int,int], dict[str, int]]]]:
+                                                 top_n: int = 30, top_anomaly_orig_n: int = 1000) -> Optional[tuple[dict[tuple[int,int],np.ndarray], dict[tuple[int,int], dict[str, int]]]]:
     ### ЭТАП XI. Настройки кластеризации и сохранение
     # Переменные
     processed_clusters = 0
@@ -982,7 +982,10 @@ def dev_handle_mode_setting_up_clusters_and_save(model: nn.SOM, requests: list[s
             top_words_all = [word for word, _ in word_tfidf.most_common(top_n)]
 
             # Обработка зарезервированных кластеров
-            if (x,y) == (0,0):
+            # Проверка, является ли кластер аномальным
+            is_unknown_anomaly = (x, y) == (0, 0)
+            is_rare_anomaly = len(cluster_requests) < config.num_requests_in_standart_cluster
+            if is_unknown_anomaly or is_rare_anomaly:
                 # Надпись
                 cf.print_inscription('НАСТРОЙКА КЛАСТЕРОВ')
                 cf.print_menu_option('[Разработчик]: Меню выбора модели Кохонена -> Настройка кластеров')
@@ -993,8 +996,10 @@ def dev_handle_mode_setting_up_clusters_and_save(model: nn.SOM, requests: list[s
                 cf.print_info('Кластер:', end=' '); cf.print_key_info(f'({x}, {y})')
                 cf.print_info('Он содержит обращений:', end=' '); cf.print_key_info(f'{len(cluster_requests)}')
                 # Название кластера
-                cluster_name = {}
-                cluster_name["Аномалия: Неопознанное обращение"] = 100
+                cluster_name = {
+                    "Аномалия: Неопознанное обращение" if is_unknown_anomaly else 
+                    "Аномалия: Обращение редкое и требует внимания": 100
+                }
                 cf.print_success('Автоматически назначено название кластеру:')
                 for key, value in cluster_name.items():
                     cf.print_success(f'  {key:<30} — {value:>3}%')
@@ -1006,7 +1011,7 @@ def dev_handle_mode_setting_up_clusters_and_save(model: nn.SOM, requests: list[s
                 if remaining_clusters != 1: cf.print_sub_line()
                 continue
 
-            # Обработка кластеров с автоназваниями
+            # Обработка кластеров с автоназваниями или полуавтоназваниями
             anomaly_probs = {description: 0 for _, description in config.target_words_for_cluster_kohonen.items()} # Вероятности для стандартных классов (высокое, низкое, скачки) + аномалия
             cluster_anomaly_requests = []      # Аномальные обращения кластера
             cluster_anomaly_orig_requests = [] # Исходные аномальные обращения кластера
@@ -1021,6 +1026,7 @@ def dev_handle_mode_setting_up_clusters_and_save(model: nn.SOM, requests: list[s
                 if not matched:
                     cluster_anomaly_orig_requests.append(cluster_orig_requests[idx])
                     cluster_anomaly_requests.append(cluster_requests[idx])
+
             # Если не стандартных обращений нет, то автоматическое название кластера
             if len(cluster_anomaly_requests) == 0:
                 # Нормализация вероятностей
@@ -1070,11 +1076,11 @@ def dev_handle_mode_setting_up_clusters_and_save(model: nn.SOM, requests: list[s
                 else:
                     cf.print_key_info('Кластер не содержит значимых слов!', end='\n\n')
 
-                # Отображение исходных обращений
+                # Отображение аномальных обращений
                 top_anomaly_orig_current = (top_anomaly_orig_n if top_anomaly_orig_n <= len(cluster_anomaly_requests) else len(cluster_anomaly_requests))
-                print_orig_requests = input(f'Отобразить топ-{top_anomaly_orig_current} аномальных исходных обращений?\n[YES - да, ~exit~ - выйти без сохранения, <Any|Enter> - нет]: ')
+                print_orig_requests = input(f'Отобразить топ-{top_anomaly_orig_current} аномальных обращений?\n[YES - да, ~exit~ - выйти без сохранения, <Any|Enter> - нет]: ')
                 if print_orig_requests == "YES":
-                    cf.print_success(f'Вы выбрали отобразить топ-{top_anomaly_orig_current} аномальных исходных обращений.', prefix='\n')
+                    cf.print_success(f'Вы выбрали отобразить топ-{top_anomaly_orig_current} аномальных обращений.', prefix='\n')
                     for num_req in range(top_anomaly_orig_current):
                         cf.print_info(f'[{num_req + 1}]: {cluster_anomaly_orig_requests[num_req]}')
                         cf.print_info(f'[{num_req + 1}]:', end=' '); cf.print_key_info(f'{cluster_anomaly_requests[num_req]}')
@@ -1084,7 +1090,7 @@ def dev_handle_mode_setting_up_clusters_and_save(model: nn.SOM, requests: list[s
                     cf.print_sub_line()
                     return None
                 else:
-                    cf.print_success(f'Вы выбрали не отображать топ-{top_anomaly_orig_current} оригинальных обращений.', end='\n\n')
+                    cf.print_success(f'Вы выбрали не отображать топ-{top_anomaly_orig_current} аномальных обращений.', end='\n\n')
 
                 cluster_user_name = input(f"Введите название для аномалии этого кластера [~exit~ - выйти без сохранения, <Enter> - {config.default_anomaly_name}]: ")
                 if not cluster_user_name:
@@ -1249,7 +1255,7 @@ def user_handle_save_clustered_results(data_file_path: str, save_dir_path: str, 
     cf.print_info('Сохранение обработанного файла завершено!')
     cf.print_info('Путь к файлу:', end=' '); cf.print_key_info(f'{new_data_file_path}')
     # Разделительная строка
-    cf.print_sub_line()
+    cf.print_main_line()
 
 def user_handle_preprocessed_single_request(request: str, model: Model) -> list[str]:
     """ ПРЕДОБРАБОТКА ОБРАЩЕНИЯ """
@@ -1457,7 +1463,7 @@ def user_running_program() -> None:
             csv_manager = CSVManager(os.path.basename(data_file_path), config.file_column)
             # Обработка
             requests = get_consumer_requests(csv_manager, SOURCE_DATA_DIR_PATH, SOURCE_DATA_CSV_DIR_PATH)
-            preprocessed_requests = get_preprocessed_requests(csv_manager, requests, PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH, PRETRAINED_MODELS_DIR_PATH, mode='user', load_model=False)
+            preprocessed_requests = get_preprocessed_requests(csv_manager, requests, PREPROCESSED_SOURCE_DATA_CSV_DIR_PATH, PRETRAINED_MODELS_DIR_PATH, mode='user', load_model=False, model=model)
             clean_requests = get_cleaned_requests_from_None(preprocessed_requests)
             # Получение эмбеддингов обращений
             request_embeddings = user_handle_mode_get_request_embeddings(clean_requests, word2idx, embeddings, tfidf_dict)
@@ -1475,7 +1481,7 @@ def user_running_program() -> None:
             request = input('Введите обращение:\n[~exit~ - выход]: ')
             if request == '~exit~':
                 cf.print_success('Вы выбрали выйти из пользовательского ввода обращений.')
-                cf.print_sub_line()
+                cf.print_main_line()
                 break
             choice = input('Подтвердить ввод:\n[YES - да, ~exit~ - выход, <Any|Enter> - нет]: ')
             if choice == 'YES':
@@ -1493,7 +1499,7 @@ def user_running_program() -> None:
                 cf.print_info('Данному обращению соответствует кластер:')
                 for key, value in request_cluster[0].items():
                     cf.print_info(f'  {key:<30} — {value:>3}%')
-                cf.print_main_line()
+                cf.print_sub_line()
                 continue
             elif choice=='~exit~':
                 cf.print_success('Вы выбрали выйти из пользовательского ввода обращений.')
