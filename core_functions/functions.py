@@ -582,11 +582,20 @@ def continue_train_w2v_sg_ns_model(checkpoint_file_path: str) -> None:
         # Информация о модели
         checkpoint, device = load_checkpoint_device_model_info_w2v_sg_ns(checkpoint_file_path)
 
-        # Запуск обучения модели
-        nn.W2V_SkipGram_NS.continue_train_skipgram_ns(checkpoint, device=device)
+        # Продолжить?
+        choice = input('Вы уверены, что хотите продолжить обучение с этого чекпоинта?\n[Y - да, <Any|Enter> - нет]: ')
+        if choice == 'Y':
+            # Вывод
+            cf.print_success('Вы выбрали продолжить обучение.', end='\n\n')
+            # Запуск обучения модели
+            nn.W2V_SkipGram_NS.continue_train_skipgram_ns(checkpoint, device=device)
         
-        # Вывод разделительной черты
-        cf.print_sub_line()
+            # Вывод разделительной черты
+            cf.print_sub_line()
+        else:
+            # Вывод
+            cf.print_success('Вы выбрали не продолжать обучение.')
+            return None
     else:
         return None
 
@@ -608,25 +617,33 @@ def get_saved_w2v_sg_ns_model(model_dir_path: str, pretrained_word2idx: dict[str
             # Чекпоинт и устройство
             checkpoint, device = load_checkpoint_device_model_info_w2v_sg_ns(chosen_model_file_path)
             
-            # Создание модели
-            cf.print_info('Создание модели W2V/SG/NS. Пожалуйста, подождите...')
-            model = nn.W2V_SkipGram_NS.SkipGramNS(checkpoint['model_params']['vocab_size'], checkpoint['model_params']['embedding_dim'],
-                                                       device=device, embedding_weights=None, noise_dist=checkpoint['model_params']['noise_dist']).to(device)
-            model.load_state_dict(checkpoint['state_model'])
-            cf.print_info('Модель была создана!')
+            # Выбрать?
+            choice = input('Вы уверены, что хотите выбрать этот чекпоинт?\n[Y - да, <Any|Enter> - нет]: ')
+            if choice == 'Y':
+                # Вывод
+                cf.print_success('Вы выбрали использовать выбранный чекпоинт.', end='\n\n')
+                # Создание модели
+                cf.print_info('Создание модели W2V/SG/NS. Пожалуйста, подождите...')
+                model = nn.W2V_SkipGram_NS.SkipGramNS(checkpoint['model_params']['vocab_size'], checkpoint['model_params']['embedding_dim'],
+                                                           device=device, embedding_weights=None, noise_dist=checkpoint['model_params']['noise_dist']).to(device)
+                model.load_state_dict(checkpoint['state_model'])
+                cf.print_info('Модель была создана!')
             
-            # Словарь модели
-            word2idx = cf.load_from_json(checkpoint['vocab']['word2idx_path'])
-            idx2word = cf.load_from_json(checkpoint['vocab']['idx2word_path'])
-            # Количество негативных примеров
-            n_samples = checkpoint['model_params']['n_samples']
-            # Тестирующий датасет
-            dataset_test = cf.load_from_pickle(checkpoint['dataloader']['test_dataset_path'])
+                # Словарь модели
+                word2idx = cf.load_from_json(checkpoint['vocab']['word2idx_path'])
+                idx2word = cf.load_from_json(checkpoint['vocab']['idx2word_path'])
+                # Количество негативных примеров
+                n_samples = checkpoint['model_params']['n_samples']
+                # Тестирующий датасет
+                dataset_test = cf.load_from_pickle(checkpoint['dataloader']['test_dataset_path'])
 
-            # Разделительная строка
-            cf.print_sub_line()
+                # Разделительная строка
+                cf.print_sub_line()
             
-            return model, word2idx, idx2word, n_samples, dataset_test, device
+                return model, word2idx, idx2word, n_samples, dataset_test, device
+            else:
+                # Вывод
+                cf.print_success('Вы выбрали не использовать выбранный чекпоинт.')
         continue
     
     # Выбор загрузки модели по умолчанию
@@ -751,20 +768,27 @@ def get_saved_kohonen_model(model_dir_path: str) -> Optional[tuple[nn.SOM, list[
             
             # Чекпоинт и устройство
             checkpoint, device = load_checkpoint_device_model_info_kohonen(chosen_model_file_path)
-            
-            # Создание модели
-            cf.print_info('Создание модели Кохонена. Пожалуйста, подождите...')
-            model = nn.SOM()
-            model.load_som_by_checkpoint(checkpoint, device=device)
-            cf.print_info('Модель была создана!')
            
-            # Тренировочный датасет
-            dataset_train = cf.load_from_pickle(checkpoint['paths']['data_path'])
+            # Выбрать?
+            choice = input('Вы уверены, что хотите выбрать этот чекпоинт?\n[Y - да, <Any|Enter> - нет]: ')
+            if choice == 'Y':
+                # Вывод
+                cf.print_success('Вы выбрали использовать выбранный чекпоинт.', end='\n\n')
+                # Создание модели
+                cf.print_info('Создание модели Кохонена. Пожалуйста, подождите...')
+                model = nn.SOM()
+                model.load_som_by_checkpoint(checkpoint, device=device)
+                cf.print_info('Модель была создана!')
+           
+                # Тренировочный датасет
+                dataset_train = cf.load_from_pickle(checkpoint['paths']['data_path'])
 
-            # Разделительная строка
-            cf.print_sub_line()
+                # Разделительная строка
+                cf.print_sub_line()
             
-            return model, dataset_train, checkpoint['paths']['map']
+                return model, dataset_train, checkpoint['paths']['map']
+            else:
+                cf.print_success('Вы выбрали не использовать выбранный чекпоинт.')
     return None
 
 
@@ -857,11 +881,13 @@ def dev_handle_mode_get_request_embeddings(corpus: list[list[str]], word2idx: di
     cf.print_menu_option('[Разработчик]: Меню выбора модели W2V/SG/NS -> Эмбеддинги обращений')
     mode = input('Сформировать эмбеддинги обращений?\n[NO - нет, <Any|Enter> - да]: ')
     if mode != 'NO':
+        cf.print_success('Вы выбрали сформировать эмбеддинги обращений.', end='\n\n')
         tfidf_dict = nn.compute_tf_idf(corpus, word2idx)
         request_embeddings = nn.get_request_embeddings(corpus, word2idx, embeddings, vector_size, tfidf_dict)
         cf.print_main_line()
         return tfidf_dict, request_embeddings
     else:
+        cf.print_success('Вы выбрали вернуться в меню выбора модели W2V/SG/NS.')
         cf.print_sub_line()
         return None
 
@@ -897,12 +923,22 @@ def dev_handle_mode_train_kohonen_model(request_embeddings: np.ndarray, TRAINED_
             cf.print_inscription('ПРОДОЛЖЕНИЕ ОБУЧЕНИЯ МОДЕЛИ КОХОНЕНА')
             # Информация о модели
             checkpoint, device = load_checkpoint_device_model_info_kohonen(checkpoint_file_path)
-            # Создание модели
-            model = nn.SOM()
-            # Запуск обучения модели
-            model.continue_train(checkpoint, device=device, count_save_epoch=10)
-            # Вывод разделительной черты
-            cf.print_sub_line()
+
+            # Продолжить?
+            choice = input('Вы уверены, что хотите продолжить обучение с этого чекпоинта?\n[Y - да, <Any|Enter> - нет]: ')
+            if choice == 'Y':
+                # Вывод
+                cf.print_success('Вы выбрали продолжить обучение.', end='\n\n')
+                # Создание модели
+                model = nn.SOM()
+                # Запуск обучения модели
+                model.continue_train(checkpoint, device=device, count_save_epoch=10)
+                # Вывод разделительной черты
+                cf.print_sub_line()
+            else:
+                # Вывод
+                cf.print_success('Вы выбрали не продолжать обучение.')
+                return None
         else:
             return None
     
