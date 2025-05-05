@@ -135,6 +135,7 @@ def normalized_probabilities_by_raw_counts(anomaly_probs: dict[str, int]) -> dic
 
     return anomaly_probs
 
+
 """ ДОПОЛНИТЕЛЬНЫЕ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ """
 def prepare_training_session_for_model(TRAINED_MODEL_DIR_PATHS: list[str]) -> Optional[tuple[str, bool]]:
     for path in TRAINED_MODEL_DIR_PATHS:

@@ -469,7 +469,7 @@ def read_file_add_column_and_save(data_file_path: str, save_dir_path: str, reque
                 'Q': 30,
                 'R': 30,
                 'S': 25,
-                'T': 60
+                'T': 100
             }
 
             # Применение ширины к каждому столбцу
