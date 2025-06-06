@@ -1,4 +1,5 @@
 import core_functions as cf
+import sys
 import time, os
 
 def clear_console():
@@ -30,6 +31,6 @@ if __name__ == "__main__":
             cf.user_running_program()
         elif mode == '0':
             cf.print_success("Выход из программы.", end='\n\n')
-            exit()
+            sys.exit()
         else:
             cf.print_error("Неверный ввод. Пожалуйста, попробуйте снова.")

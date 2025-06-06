@@ -130,6 +130,7 @@ def process(pipeline: Pipeline, text = "Строка", keep_pos = True, keep_pun
     # Обрабатываем текст и получаем результат в формате CONCLL-U
     try:
         processed = pipeline.process(text)
+        # print(processed)
     except Exception as e:
         cf.print_critical_error("Ошибка при обработке обращения.", prefix='\n')
         cf.prunt_critical_error(f"Обращение: {text}")
@@ -141,7 +142,6 @@ def process(pipeline: Pipeline, text = "Строка", keep_pos = True, keep_pun
 
     # Извлекаем из обработанного текста леммы, тэги (часть речи) и морфологические характеристики
     tagged = [w.split('\t') for w in content if w]
-
     for t in tagged:
         if (len(t) != 10): # Если список короткий (не 10 - значение по умолчанию) - строчка не содержит нужного разбора, пропускаем
             stats['bad_lines'] += 1
@@ -330,11 +330,10 @@ def process_single_request(request: str, model: Model) -> list[str]:
     try:
         process_pipeline = Pipeline(model, 'tokenize', Pipeline.DEFAULT, Pipeline.DEFAULT, 'conllu') # Конвейер обработки текста
     except Exception as e:
-        cf.print_critical_error('Невозможно загрузить пайплан.', prefix='\n')
+        cf.print_critical_error('Невозможно загрузить пайплайн.', prefix='\n')
         cf.print_critical_error(f'Причина: {e}', end='\n\n')
         exit(1)
     # Обработка
     preprocessed_request = process(process_pipeline, text=request, keep_pos=True, keep_punct=False, stats=None)
     cf.print_info('Предобработка обращения потребителя завершена!')
-    
     return preprocessed_request

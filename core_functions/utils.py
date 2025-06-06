@@ -238,6 +238,7 @@ class CSVManager:
         return self._get_file_hash()
 
 ### ЦВЕТОВАЯ ГАММА ###
+# Черный фон    
 ANSI = {
     'RESET': '\033[0m',
     'WELCOME_SIGN': '\033[38;5;245m',
@@ -253,6 +254,22 @@ ANSI = {
     'SUB_LINE': '\033[38;5;245m',
     'INSCRIPTION': '\033[38;5;103m'
     }
+# Белый фон
+"""ANSI = {
+    'RESET': '\033[0m',
+    'WELCOME_SIGN': '\033[38;5;238m',
+    'WELCOME_TEXT': '\033[38;5;27m',
+    'SUCCESS': '\033[38;5;22m',
+    'WARN': '\033[38;5;202m',
+    'ERROR': '\033[38;5;160m',
+    'CRITICAL_ERROR': '\033[38;5;88m',
+    'INFO': '\033[38;5;24m',
+    'KEY_INFO' : '\033[38;5;25m',
+    'MENU_OPTION': '\033[38;5;18m',
+    'MAIN_LINE': '\033[38;5;240m',
+    'SUB_LINE': '\033[38;5;244m',
+    'INSCRIPTION': '\033[38;5;59m'
+}"""
 
 ### ФУНКЦИИ ВЫВОДА ###
 def print_welcome(width: int=108) -> None:
